@@ -38,10 +38,15 @@ resource "aws_iam_role" "github_actions_push" {
         # Exact match (StringEquals, not StringLike) on the master branch only.
         # The repo is a public fork, so workflows from pull requests and from
         # any other branch or tag must not be able to obtain push credentials.
+        #
+        # The repo issues immutable subject claims, which carry the owner and
+        # repo IDs (`gh api repos/sarah-savage/quest/actions/oidc/customization/sub`
+        # → sub_claim_prefix), so a renamed or re-created repo of the same name
+        # cannot match. The plain repo:sarah-savage/quest:… form is never sent.
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-            "token.actions.githubusercontent.com:sub" = "repo:sarah-savage/quest:ref:refs/heads/master"
+            "token.actions.githubusercontent.com:sub" = "repo:sarah-savage@112581092/quest@1435536201:ref:refs/heads/master"
           }
         }
       },
