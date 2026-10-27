@@ -57,8 +57,10 @@ resource "aws_lb_target_group" "quest" {
   vpc_id               = module.vpc.vpc_id
   deregistration_delay = 30
 
+  # /docker answers from inside the container. / would make bin/001 fetch
+  # www.rearc.io on every probe, tying both targets' health to that site.
   health_check {
-    path                = "/"
+    path                = "/docker"
     matcher             = "200"
     interval            = 15
     healthy_threshold   = 2

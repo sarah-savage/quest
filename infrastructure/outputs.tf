@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────
-# Networking outputs consumed by later layers
+# Networking outputs
 # ──────────────────────────────────────────────────────────────
 
 output "vpc_id" {

@@ -12,12 +12,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
   client_id_list = ["sts.amazonaws.com"]
 
-  # thumbprint_list is omitted on purpose. It is Optional (and Computed) in
-  # hashicorp/aws 6.x, and for GitHub AWS validates the IdP against its own
-  # library of trusted root CAs and ignores any configured thumbprint (provider
-  # docs for aws_iam_openid_connect_provider, v6.70.0; AWS IAM User Guide,
-  # "Obtain the thumbprint for an OpenID Connect identity provider"). A pinned
-  # thumbprint would only add a value to rotate that nothing reads.
+  # No thumbprint_list: AWS validates GitHub's IdP against its own trusted CAs.
 
   tags = local.tags
 }
@@ -35,9 +30,8 @@ resource "aws_iam_role" "github_actions_push" {
           Federated = aws_iam_openid_connect_provider.github.arn
         }
         Action = "sts:AssumeRoleWithWebIdentity"
-        # Exact match (StringEquals, not StringLike) on the master branch only.
-        # The repo is a public fork, so workflows from pull requests and from
-        # any other branch or tag must not be able to obtain push credentials.
+        # The master branch only: the repo is a public fork, so workflows from
+        # pull requests and other branches or tags get no push credentials.
         #
         # The repo issues immutable subject claims, which carry the owner and
         # repo IDs (`gh api repos/sarah-savage/quest/actions/oidc/customization/sub`

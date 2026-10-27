@@ -23,9 +23,9 @@ resource "aws_cloudwatch_log_group" "quest" {
 # ──────────────────────────────────────────────────────────────
 # SECRET_WORD — SSM Parameter Store SecureString
 #
-# Terraform creates the parameter with a placeholder and never touches the
-# value again, so the real secret word never appears in git, a plan or state.
-# It is set by hand with `aws ssm put-parameter --overwrite`, then the service
+# Terraform creates the parameter with a placeholder and never sets the value
+# again, so the real word is not in git. Refresh still reads it into Terraform
+# Cloud state. It is set by hand with `aws ssm put-parameter --overwrite`, then the service
 # is redeployed so the tasks read the new value at start.
 # ──────────────────────────────────────────────────────────────
 
@@ -103,26 +103,13 @@ resource "aws_iam_role_policy" "ecs_execution" {
         Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "${aws_cloudwatch_log_group.quest.arn}:*"
       },
+      # No kms:Decrypt statement: the parameter uses the AWS-managed aws/ssm
+      # key, whose key policy already allows decryption through SSM.
       {
         Sid      = "ReadSecretWord"
         Effect   = "Allow"
         Action   = "ssm:GetParameters"
         Resource = aws_ssm_parameter.secret_word.arn
-      },
-      # The parameter uses the default aws/ssm key. Scoping by the encryption
-      # context SSM sends limits this to decrypting that one parameter, without
-      # a plan-time lookup of the AWS-managed key's ID.
-      {
-        Sid      = "DecryptSecretWord"
-        Effect   = "Allow"
-        Action   = "kms:Decrypt"
-        Resource = "arn:aws:kms:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:key/*"
-        Condition = {
-          StringEquals = {
-            "kms:ViaService"                      = "ssm.${data.aws_region.current.region}.amazonaws.com"
-            "kms:EncryptionContext:PARAMETER_ARN" = aws_ssm_parameter.secret_word.arn
-          }
-        }
       },
     ]
   })

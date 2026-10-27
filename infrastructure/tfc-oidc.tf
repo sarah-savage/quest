@@ -18,12 +18,8 @@
 #
 # BOOTSTRAP — these roles cannot create themselves. TFC has no AWS credentials
 # until a role exists, and the roles are what grant them. The OIDC provider,
-# both roles and their policy attachments were therefore created by hand ONCE
-# with the AWS CLI, with exactly the attributes declared here, and are adopted
-# into state by the `import` blocks below on the first run. That first plan
-# must show five imports and no in-place changes to them; any diff means the
-# code and the hand-created objects disagree and must be reconciled before
-# apply.
+# both roles and their policy attachments were therefore created by hand once
+# with the AWS CLI and imported into state on the first run.
 #
 # The audience is fixed by TFC and must be exactly aws.workload.identity unless
 # TFC_AWS_WORKLOAD_IDENTITY_AUDIENCE overrides it on the workspace.
@@ -121,34 +117,6 @@ resource "aws_iam_role" "terraform_plan" {
 resource "aws_iam_role_policy_attachment" "terraform_plan_readonly" {
   role       = aws_iam_role.terraform_plan.name
   policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
-}
-
-# Adopt the hand-created bootstrap objects (see header). Import blocks need
-# Terraform >= 1.5; once the first apply has imported them they are no-ops and
-# may be removed.
-import {
-  to = aws_iam_openid_connect_provider.tfc
-  id = "arn:aws:iam::847323757682:oidc-provider/app.terraform.io"
-}
-
-import {
-  to = aws_iam_role.terraform
-  id = "RearcQuestTerraform"
-}
-
-import {
-  to = aws_iam_role_policy_attachment.terraform_admin
-  id = "RearcQuestTerraform/arn:aws:iam::aws:policy/AdministratorAccess"
-}
-
-import {
-  to = aws_iam_role.terraform_plan
-  id = "RearcQuestTerraformPlan"
-}
-
-import {
-  to = aws_iam_role_policy_attachment.terraform_plan_readonly
-  id = "RearcQuestTerraformPlan/arn:aws:iam::aws:policy/ReadOnlyAccess"
 }
 
 output "tfc_plan_role_arn" {

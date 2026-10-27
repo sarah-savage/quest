@@ -4,13 +4,6 @@
 # The quest bills by the hour (NAT gateway, ALB, Fargate), so a $100/month
 # cost budget emails at $40 and $50 of actual spend and at $100 of forecasted
 # spend for the month.
-#
-# AWS Budgets rather than a CloudWatch EstimatedCharges alarm: that metric
-# lives only in us-east-1 (a second provider alias here), needs billing alerts
-# enabled on the account (which in an Organization member account can depend
-# on the management account), and needs an SNS topic plus a confirmed
-# subscription per address. Budgets emails the addresses directly, works from
-# this provider's region, and the first two budgets per account are free.
 # ──────────────────────────────────────────────────────────────
 
 variable "budget_alert_email" {
