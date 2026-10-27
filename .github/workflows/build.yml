@@ -1,0 +1,63 @@
+# Builds the quest image for linux/amd64 and pushes it to ECR as quest:<git sha>.
+#
+# Credentials come from GitHub's OIDC token exchanged for the QuestGitHubActionsPush
+# role (infrastructure/github-oidc.tf), which trusts only refs/heads/master of this
+# repo, so no AWS secrets are stored in GitHub. Tags are immutable in ECR, so a
+# manual re-run on a SHA that was already pushed fails at the push step.
+name: Build and push image
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - Dockerfile
+      - src/**
+      - bin/**
+      - package.json
+      - package-lock.json
+      - .github/workflows/build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  ROLE_ARN: arn:aws:iam::847323757682:role/QuestGitHubActionsPush
+  ECR_REPOSITORY: quest
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ env.ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # bin/001-bin/006 are amd64-only binaries (see Dockerfile). Provenance and
+      # SBOM attestations are off so the tag names a single image manifest that
+      # ECR basic scanning reports on, not an image index.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
