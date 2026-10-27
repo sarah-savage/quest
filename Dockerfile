@@ -8,6 +8,13 @@ FROM node:22-slim@sha256:ea11b74b986d520137cdef9a5346e447a00f275ecc4abc0055b7151
 
 ENV NODE_ENV=production
 
+# The slim image has no CA bundle, and bin/001 (Go) fetches an HTTPS page for
+# the index route; without system roots it panics with "x509: certificate
+# signed by unknown authority".
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
 # src/000.js runs execFile('bin/00N'), resolved against the working directory.
 WORKDIR /app
 
